@@ -36,6 +36,10 @@ function(setup_agent _srcs _inputs)
   endif()
 
   target_link_libraries(${_exe_name} amrex)
+  if (ENABLE_CONTAM)
+    target_link_libraries(${_exe_name} ContamClient)
+    target_compile_definitions(${_exe_name} PRIVATE USE_CONTAM)
+  endif()
 
   if(AMReX_CUDA)
     setup_target_for_cuda_compilation(${_exe_name})

@@ -69,6 +69,14 @@ endif()
 #
 set(AMREX_AGENT_SUBDIRS src)
 
+#
+# Contam
+#
+option(ENABLE_COMTAM "Enalble Contam client to drive contam co-simulation" OFF)
+if (ENABLE_CONTAM)
+  list(APPEND AMREX_AGENT_SUBDIRS contam)
+endif()
+
 list(TRANSFORM AMREX_AGENT_SUBDIRS PREPEND "${CMAKE_CURRENT_LIST_DIR}/")
 
 #

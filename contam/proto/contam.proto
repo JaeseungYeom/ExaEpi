@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.examples.contam";
+option java_outer_classname = "ContamWorldProto";
+option objc_class_prefix = "HLW";
+
+package contam;
+
+// The Contam service definition.
+service ContamServer {
+  // Sends a greeting
+  rpc RunContam (ContamRequest) returns (ContamReply) {}
+
+  rpc RunContamStreamReply (ContamRequest) returns (stream ContamReply) {}
+
+  rpc RunContamBidiStream (stream ContamRequest) returns (stream ContamReply) {}
+}
+
+// The request message containing the Contam project.
+message ContamRequest {
+  string prj = 1;
+}
+
+// The response message from contam simulation service
+message ContamReply {
+  string stdout = 1;
+  string stderr = 2;
+}
