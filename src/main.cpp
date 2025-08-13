@@ -49,16 +49,16 @@ void overrideAmrexDefaults () {
 /*! \brief Main function: initializes AMReX, calls runAgent(), finalizes AMReX */
 int main (int argc, /*!< Number of command line arguments */
           char* argv[] /*!< Command line arguments */) {
-#ifdef USE_CONTAM
-    Contam::pickContamArgs(argc, argv);
-#endif
-
     int my_rank;
 #ifdef AMREX_USE_MPI
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 #else
     my_rank = 0;
+#endif
+
+#ifdef USE_CONTAM
+    Contam::pickContamArgs(argc, argv, my_rank);
 #endif
 
     if (argc < 2) {
@@ -393,6 +393,7 @@ void runAgent () {
                                                     params.disease_names, i);
                 }
             }
+
 #ifdef USE_CONTAM
             auto response = Contam::contamClient();
 #endif

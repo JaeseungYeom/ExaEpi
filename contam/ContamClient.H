@@ -15,8 +15,24 @@ struct ContamResponse {
   ContamResponse(bool st, const std::string& str) : status(st), err_str(str) {}
 };
 
-/*! \brief Parse and consume Contam related arguments */
-void pickContamArgs(int argc, char** argv);
+/*! \brief Parse and consume Contam related arguments
+ *
+ * --ctm_target=<server_addrs:port>
+ *  : address of the server to establish a connection with for RPC.
+ *    The default is "localhost:50051".
+ * --ctm_prj_file=<filename>
+ *  : Contam project filename. The file will be read from the client and sent
+ *    to the server as a payload of an RPC.
+ * --ctm_stdout_file=<filename>
+ *  : The stdout from the Contam simulation on server. It will be stored into
+ *    a file on a client side. The MPI rank id will be added to the filename
+ *    string for uniqueness.
+ * --ctm_stderr_file=<filename>
+ *  : The stderr from the Contam simulation on server. It will be stored into
+ *    a file on a client side. The MPI rank id will be added to the filename
+ *    string for uniqueness.
+ */
+void pickContamArgs(int argc, char** argv, int rank);
 
 /*! \brief Run Comtam client */
 ContamResponse contamClient();

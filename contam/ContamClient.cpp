@@ -9,6 +9,8 @@
 #include <memory>
 #include <string>
 #include <filesystem>
+#include <thread>
+#include <sstream>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
@@ -21,10 +23,10 @@
 
 #include "ContamClient.H"
 
-ABSL_FLAG(std::string, target, "localhost:50051", "Server address");
-ABSL_FLAG(std::string, ctm_prj_filename, "", "Contam project filename");
-ABSL_FLAG(std::string, ctm_stdout_filename, "", "Contam stdout filename");
-ABSL_FLAG(std::string, ctm_stderr_filename, "", "Contam stderr filename");
+ABSL_FLAG(std::string, ctm_target, "localhost:50051", "Server address");
+ABSL_FLAG(std::string, ctm_prj_file, "", "Contam project filename");
+ABSL_FLAG(std::string, ctm_stdout_file, "", "Contam stdout filename");
+ABSL_FLAG(std::string, ctm_stderr_file, "", "Contam stderr filename");
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -45,9 +47,28 @@ bool checkFilename(const std::string& filename)
   return true;
 }
 
+/*! \brief Add a string to a filename before extension */
+std::string addStrToFilenameBeforeExt(const std::string& filename, const std::string& str) {
+  std::filesystem::path p(filename);
+
+  // Get the filename without the extension
+  std::string fnameWOExt = p.stem().string();
+
+  // Get the extension (including the dot)
+  std::string ext = p.extension().string();
+
+  // Construct the new filename
+  std::string newFilename = fnameWOExt + str + ext;
+
+  // Create a new path with the modified filename
+  std::filesystem::path newPath = p.parent_path() / newFilename;
+
+  return newPath.string();
+}
+
 std::string loadContamProject()
 {
-  std::string prj_fname = absl::GetFlag(FLAGS_ctm_prj_filename);
+  std::string prj_fname = absl::GetFlag(FLAGS_ctm_prj_file);
   if (!checkFilename(prj_fname)) {
     return "";
   }
@@ -60,16 +81,57 @@ std::string loadContamProject()
   return prj_file;
 }
 
-size_t writeFile(const std::string& fname, const std::string& content)
+size_t writeFile(
+  const std::string& fname,
+  const std::string& content,
+  std::ios_base::openmode mode = std::ios_base::out)
 {
   if (!checkFilename(fname)) {
     std::cerr << "Invalid filename: " + fname << std::endl;
     return static_cast<size_t>(0ul);
   }
-  std::ofstream ofs(fname);
+  std::ofstream ofs(fname, mode);
   ofs << content;
   ofs.close();
   return content.size();
+}
+
+
+struct ContamState {
+  int rank;
+  std::string stdout_file;
+  std::string stderr_file;
+
+  ContamState() : rank(-1) {}
+
+  void SetState(int r) {
+    rank = r;
+    const std::string rank_str = std::to_string(r);
+
+    stdout_file = absl::GetFlag(FLAGS_ctm_stdout_file);
+    stdout_file = checkFilename(stdout_file)?
+                  addStrToFilenameBeforeExt(stdout_file, rank_str) : "";
+
+    stderr_file = absl::GetFlag(FLAGS_ctm_stderr_file);
+    stderr_file = checkFilename(stderr_file)?
+                  addStrToFilenameBeforeExt(stderr_file, rank_str) : "";
+  }
+};
+
+static thread_local ContamState ctmState;
+static void ContaStateInit () __attribute__ ((constructor));
+static void ContaStateFini () __attribute__ ((destructor));
+
+void ContaStateInit () {
+  ctmState.rank = -1;
+  ctmState.stdout_file.clear();
+  ctmState.stderr_file.clear();
+}
+
+void ContaStateFini () {
+  ctmState.rank = -1;
+  ctmState.stdout_file.clear();
+  ctmState.stderr_file.clear();
 }
 
 class ContamServerClient {
@@ -94,18 +156,25 @@ class ContamServerClient {
     // The actual RPC
     Status status = stub_->RunContam(&context, request, &reply);
 
-    const std::string stdout_fname = absl::GetFlag(FLAGS_ctm_stdout_filename);
-    const std::string stderr_fname = absl::GetFlag(FLAGS_ctm_stderr_filename);
 
-    if (stdout_fname.empty()) {
-      std::cout << reply.stdout();
+    std::ostringstream ss;
+    ss << std::this_thread::get_id();
+    const std::string tid_str = ss.str();
+
+    if (Contam::ctmState.stdout_file.empty()) {
+      std::cout << reply.stdout() << std::endl;
     } else {
-      writeFile(stdout_fname, reply.stdout());
+      std::string stdout_file
+        = addStrToFilenameBeforeExt(stdout_file, tid_str);
+      writeFile(stdout_file, reply.stdout(), std::ios_base::app);
     }
-    if (stderr_fname.empty()) {
-      std::cerr << reply.stderr();
+
+    if (Contam::ctmState.stderr_file.empty()) {
+      std::cerr << reply.stderr() << std::endl;
     } else {
-      writeFile(stderr_fname, reply.stderr());
+      std::string stderr_file
+        = addStrToFilenameBeforeExt(stderr_file, tid_str);
+      writeFile(stderr_file, reply.stderr(), std::ios_base::app);
     }
 
     ContamResponse response;
@@ -122,19 +191,18 @@ class ContamServerClient {
   std::unique_ptr<ContamServer::Stub> stub_;
 };
 
-void pickContamArgs(int argc, char** argv)
+void pickContamArgs(int argc, char** argv, int rank)
 {
-  // Instantiate the client. It requires a channel, out of which the actual RPCs
-  // are created. This channel models a connection to an endpoint specified by
-  // the argument "--target=" which is the only expected argument.
   absl::ParseCommandLine(argc, argv);
+  Contam::ctmState.SetState(rank);
 }
 
 ContamResponse contamClient() {
-  std::string target_str = absl::GetFlag(FLAGS_target);
+  std::string target_str = absl::GetFlag(FLAGS_ctm_target);
 
-  // We indicate that the channel isn't authenticated (use of
-  // InsecureChannelCredentials()).
+  // Instantiate the client. RPCs are created out of a channel, that models
+  // a connection to an endpoint.
+  // The channel here isn't authenticated (thus InsecureChannelCredentials())
   ContamServerClient contam_connector(
       grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
 
