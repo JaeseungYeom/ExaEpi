@@ -20,7 +20,7 @@
 #include "Utils.H"
 
 #ifdef USE_CONTAM
-#include "../contam/ContamClient.H"
+#include "contam/ContamClient.H"
 #endif
 
 #include "version.h"
