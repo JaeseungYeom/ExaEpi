@@ -31,8 +31,19 @@ struct ContamResponse {
  *  : The stderr from the Contam simulation on server. It will be stored into
  *    a file on a client side. The MPI rank id will be added to the filename
  *    string for uniqueness.
+ * --ctm_of_prefix=<string>
+ *  : The prefix string that will be added to output files from Contam.
+ *    This could be a directory, in which case it should ends with '/' and
+ *    the directory should exists.
+ * --ctm_[ach|cex|csm|log|rst|sim|xlog]=[false|true]
+ *  : Retrieve the output file with specific extension from Contam server.
+ *    The default value is false.
  */
-void pickContamArgs(int argc, char** argv, int rank);
+void pickContamArgs(int argc, char** argv);
+
+/*! \brief Set MPI rank \p r to label per-rank output filename unique.
+ * */
+void initContamClientState(int r);
 
 /*! \brief Run Comtam client */
 ContamResponse contamClient();

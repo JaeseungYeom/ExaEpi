@@ -49,6 +49,10 @@ void overrideAmrexDefaults () {
 /*! \brief Main function: initializes AMReX, calls runAgent(), finalizes AMReX */
 int main (int argc, /*!< Number of command line arguments */
           char* argv[] /*!< Command line arguments */) {
+#ifdef USE_CONTAM
+    Contam::pickContamArgs(argc, argv);
+#endif
+
     int my_rank;
 #ifdef AMREX_USE_MPI
     MPI_Init(&argc, &argv);
@@ -58,7 +62,7 @@ int main (int argc, /*!< Number of command line arguments */
 #endif
 
 #ifdef USE_CONTAM
-    Contam::pickContamArgs(argc, argv, my_rank);
+    Contam::initContamClientState(my_rank);
 #endif
 
     if (argc < 2) {
