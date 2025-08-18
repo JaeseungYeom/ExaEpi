@@ -50,7 +50,7 @@ void overrideAmrexDefaults () {
 int main (int argc, /*!< Number of command line arguments */
           char* argv[] /*!< Command line arguments */) {
 #ifdef USE_CONTAM
-    Contam::pickContamArgs(argc, argv);
+    Contam_gRPC::pickContamArgs(argc, argv);
 #endif
 
     int my_rank;
@@ -62,7 +62,7 @@ int main (int argc, /*!< Number of command line arguments */
 #endif
 
 #ifdef USE_CONTAM
-    Contam::initContamClientState(my_rank);
+    Contam_gRPC::initContamClientState(my_rank);
 #endif
 
     if (argc < 2) {
@@ -399,7 +399,7 @@ void runAgent () {
             }
 
 #ifdef USE_CONTAM
-            auto response = Contam::contamClient();
+            auto response = Contam_gRPC::contamClient();
 #endif
             // Update agents' disease status
             pc.updateStatus(disease_stats);

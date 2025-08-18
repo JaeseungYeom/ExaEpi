@@ -1,7 +1,7 @@
 # Name of this driver project/program
 set(CONTAM_CLIENT "ContamClient")
 project(${CONTAM_CLIENT} LANGUAGES CXX)
-add_library(${CONTAM_CLIENT} "${CONTAM_CLIENT}.cpp")
+add_library(${CONTAM_CLIENT} SHARED "${CONTAM_CLIENT}.cpp" utils.cpp)
 
 if(DEFINED ENV{gRPC_DIR})
   message(STATUS "gRPC_DIR: $ENV{gRPC_DIR}")
@@ -38,15 +38,18 @@ add_library(contam_grpc_proto
   ${contam_grpc_hdrs}
   ${contam_proto_srcs}
   ${contam_proto_hdrs})
+
 target_link_libraries(contam_grpc_proto
   absl::check
   ${_REFLECTION}
   ${_GRPC_GRPCPP}
   ${_PROTOBUF_LIBPROTOBUF})
 
+set_target_properties(contam_grpc_proto PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+
 # Target
 #target_include_directories(${CONTAM_CLIENT} PUBLIC headers)
-target_link_libraries(${CONTAM_CLIENT} PRIVATE
+target_link_libraries(${CONTAM_CLIENT}
     contam_grpc_proto
     absl::check
     absl::flags

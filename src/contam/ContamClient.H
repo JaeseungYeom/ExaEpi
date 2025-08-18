@@ -5,7 +5,7 @@
 #ifndef _CONTAM_CLIENT_H_
 #define _CONTAM_CLIENT_H_
 
-namespace Contam {
+namespace Contam_gRPC {
 
 /*! \brief Contam simulation result returned */
 struct ContamResponse {
