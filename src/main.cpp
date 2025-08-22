@@ -19,6 +19,10 @@
 #include "UrbanPopData.H"
 #include "Utils.H"
 
+#ifdef USE_CONTAM
+#include "contam_client.h"
+#endif
+
 #include "version.h"
 
 using namespace amrex;
@@ -45,6 +49,9 @@ void overrideAmrexDefaults () {
 /*! \brief Main function: initializes AMReX, calls runAgent(), finalizes AMReX */
 int main (int argc, /*!< Number of command line arguments */
           char* argv[] /*!< Command line arguments */) {
+#ifdef USE_CONTAM
+    Contam_gRPC::pickContamArgs(argc, argv);
+#endif
 
     int my_rank;
 #ifdef AMREX_USE_MPI
@@ -52,6 +59,10 @@ int main (int argc, /*!< Number of command line arguments */
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 #else
     my_rank = 0;
+#endif
+
+#ifdef USE_CONTAM
+    Contam_gRPC::initContamClientState(my_rank);
 #endif
 
     if (argc < 2) {
@@ -387,6 +398,9 @@ void runAgent () {
                 }
             }
 
+#ifdef USE_CONTAM
+            auto response = Contam_gRPC::contamClient();
+#endif
             // Update agents' disease status
             pc.updateStatus(disease_stats);
 
